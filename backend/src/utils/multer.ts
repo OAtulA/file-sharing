@@ -16,11 +16,14 @@ const storage = multer.diskStorage({
       console.log(`The error ocurred in multer upload is ${err}`);
     }
   },
-  filename(_req, _file, callback) {
-    const s3name = crypto
+  filename(_req, file, callback) {
+    let s3name = crypto
       .randomBytes(Math.floor(Math.random() * (10 - 5 + 1)) + 5)
       .toString("hex");
 
+    // Adding the file extension
+    s3name += file.originalname.substring(file.originalname.lastIndexOf("."));
+    console.log(`file name is `, s3name)
     callback(null, s3name);
   },
 });
@@ -28,7 +31,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10000000,
+    fileSize: 250000000, //250 mB
   },
 });
 
@@ -70,11 +73,11 @@ const removeTempFiles = (req, res, next) => {
   }
 };
 
-import  { MulterError } from 'multer';
+import { MulterError } from "multer";
 
 // Error handler for Multer
 // @ts-ignore
-export const multerErrorHandler = (err , req: Request, res: Response, next: NextFunction) => {
+export const multerErrorHandler = (err, req, res, next) => {
   // Clean up temporary files
   console.error("\n Error in multerErrorHandler \n");
   removeTempFiles(req, res, next); // Assuming req.file contains the uploaded file information
@@ -84,13 +87,21 @@ export const multerErrorHandler = (err , req: Request, res: Response, next: Next
     console.error("Multer Error:", err); // Log the error for debugging
     switch (err.code) {
       case "LIMIT_UNEXPECTED_FILE":
-        return res.status(400).json({ error: "Unexpected field", errorCode: err.code });
+        return res
+          .status(400)
+          .json({ error: "Unexpected field", errorCode: err.code });
       case "LIMIT_FILE_SIZE":
-        return res.status(400).json({ error: "File size limit exceeded", errorCode: err.code });
+        return res
+          .status(400)
+          .json({ error: "File size limit exceeded", errorCode: err.code });
       case "LIMIT_FILE_COUNT":
-        return res.status(400).json({ error: "Too many files", errorCode: err.code });
+        return res
+          .status(400)
+          .json({ error: "Too many files", errorCode: err.code });
       default:
-        return res.status(500).json({ error: "Multer error", errorCode: err.code });
+        return res
+          .status(500)
+          .json({ error: "Multer error", errorCode: err.code });
     }
   } else if (err) {
     // Handle other types of errors

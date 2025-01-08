@@ -2,7 +2,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 
 function FileSharingPage() {
   const [file, setFile] = useState<File>();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ data: "", clr: "" });
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -13,40 +13,39 @@ function FileSharingPage() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    
+
     // Validate file exists
     if (!file) {
-      setMessage("No file selected");
+      setMessage({ data: "No file selected", clr: "red" });
       return;
     }
-  
+
     const formData = new FormData();
     formData.append("file", file);
-  
+
     fetch("http://localhost:4001/api/v0/upload", {
       method: "POST",
       body: formData,
     })
-    .then((response) => {
-      if (!response.ok) {
-        // Log detailed error
-        return response.text().then(text => {
-          throw new Error(text);
-        });
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Upload successful", data);
-      setMessage("File uploaded successfully");
-      setFile(undefined);
-    })
-    .catch((error) => {
-      console.error("Upload error:", error);
-      setMessage(`Upload failed: ${error.message}`);
-    });
+      .then((response) => {
+        if (!response.ok) {
+          // Log detailed error
+          return response.text().then((text) => {
+            throw new Error(text);
+          });
+        }
+        return response;
+      })
+      .then((data) => {
+        console.log("Upload successful", data);
+        setMessage({ data: "File uploaded successfully", clr: "green" });
+        setFile(undefined);
+      })
+      .catch((error) => {
+        console.error("Upload error:", error);
+        setMessage({ data: `Upload failed: ${error.message}`, clr: "red" });
+      });
   };
-  
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -72,7 +71,11 @@ function FileSharingPage() {
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
             />
           </div>
-          {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
+          {message.data && (
+            <p className={`text-${message.clr}-500 text-sm mb-4`}>
+              {message.data}
+            </p>
+          )}
 
           <button
             type="submit"
