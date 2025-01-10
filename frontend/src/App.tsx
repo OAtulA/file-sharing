@@ -1,8 +1,14 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 
+interface iDataUploadRes {
+  downloadUrl: string;
+  message: string;
+}
+
 function FileSharingPage() {
   const [file, setFile] = useState<File>();
   const [message, setMessage] = useState({ data: "", clr: "" });
+  const [downloadUrl, setDownloadUrl] = useState("");
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -34,10 +40,15 @@ function FileSharingPage() {
             throw new Error(text);
           });
         }
-        return response;
+        return response.json();
       })
-      .then((data) => {
-        console.log("Upload successful", data);
+      .then((data: iDataUploadRes) => {
+        const usefulData = {
+          downloadUrl: data.downloadUrl,
+          message: data.message,
+        };
+        setDownloadUrl(usefulData.downloadUrl);
+        console.log("Upload successful", usefulData);
         setMessage({ data: "File uploaded successfully", clr: "green" });
         setFile(undefined);
       })
@@ -85,8 +96,46 @@ function FileSharingPage() {
           </button>
         </form>
       </div>
+
+      {/* div to make a copyable text for the download url when downloadUrl is not empty */}
+      {downloadUrl && <CopyableDiv displayText={downloadUrl} />}
     </div>
   );
 }
 
 export default FileSharingPage;
+
+const CopyableDiv = ({ displayText }: { displayText: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(displayText)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      })
+      .catch((err) => console.error("Failed to copy text: ", err));
+  };
+
+  return (
+    <div style={{ padding: "20px", border: "1px solid #ccc", width: "300px" }}>
+      <div style={{ marginBottom: "10px", fontSize: "16px", color: "#333" }}>
+        {displayText}
+      </div>
+      <button
+        onClick={handleCopy}
+        style={{
+          padding: "8px 12px",
+          backgroundColor: "#4CAF50",
+          color: "#fff",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+        }}
+      >
+        {copied ? "Copied!" : "Copy"}
+      </button>
+    </div>
+  );
+};

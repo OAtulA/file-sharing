@@ -27,4 +27,6 @@ dist-ssr
 .env*
 !.env.demo
 
+# dev files and folders
 uploads
+*.db 

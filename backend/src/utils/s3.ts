@@ -7,4 +7,128 @@
  * I will delete the files after a certain size limit is hit.
  */
 
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectCommandOutput,
+  PutObjectCommandOutput,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createReadStream } from "node:fs";
 
+const s3Client = new S3Client({
+  region: process.env.AWS_BUCKET_REGION || "",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
+  requestHandler: new (require("@aws-sdk/node-http-handler").NodeHttpHandler)({
+    connectionTimeout: 10_000, // 10 seconds
+    timeout: 10_000, // 10 seconds
+  }),
+});
+
+// Upload File
+/**
+ *
+ * @param filepath - path of File to be uploaded
+ * @param key - The file path in the s3 bucket
+ * @returns response
+ *
+ * I may check if the response is success or not using the isUploadSuccess function
+ */
+async function uploadToS3(filepath: string, key: string) {
+  const file = createReadStream(filepath);
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME || "",
+    Key: key,
+    Body: file,
+  };  
+
+  try {
+    const command = new PutObjectCommand(params);
+    const response = await s3Client.send(command);
+    return response;
+  } catch (error) {
+    console.error("S3 Upload Error:", error);
+    throw error;
+  }
+}
+
+const isUploadSuccess = (response: PutObjectCommandOutput): boolean => {
+  if (
+    response.$metadata.httpStatusCode === 200 ||
+    response.$metadata.httpStatusCode === 204
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * Delete File
+ *
+ * @param key
+ * @returns response
+ */
+async function deleteFromS3(key: string) {
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME || "",
+    Key: key,
+  };
+
+  try {
+    const command = new DeleteObjectCommand(params);
+    const response = await s3Client.send(command);
+    return response;
+  } catch (error) {
+    console.error("S3 Delete Error:", error);
+    throw error;
+  }
+}
+
+const isDeleteSuccess = (response: DeleteObjectCommandOutput): boolean => {
+  if (
+    response.$metadata.httpStatusCode === 200 ||
+    response.$metadata.httpStatusCode === 204
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ *
+ * @param key | string, the actual file path in the s3 bucket
+ * @returns signedUrl | string, The signed url to download the file
+ */
+const getSignedDownloadURL = async (
+  key: string,
+  filename?: string
+): Promise<string> => {
+  // const s3Url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${key}`;
+  filename = filename === undefined ? "dummy.jpg" : filename;
+  const signedUrl = await getSignedUrl(
+    s3Client,
+    new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key, // Key from your database
+      ResponseContentDisposition: `attachment; filename="${filename}"`, // Specify the desired filename
+    }),
+    { expiresIn: 3600 } // URL expires in 1 hour
+  );
+
+  return signedUrl;
+};
+
+export {
+  uploadToS3,
+  deleteFromS3,
+  isDeleteSuccess,
+  isUploadSuccess,
+  getSignedDownloadURL,
+};

@@ -39,10 +39,15 @@ export const singleFileHandler = upload.single("file");
 
 // to delete the files after s3 upload
 export const clearTempFiles = (filePath: string) => {
+  console.log("filePath is in clearTempFiles ", filePath);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
+    // console.log(`${filePath} has been deleted`);
     return true;
-  } else return false;
+  } else {
+    // console.log(`${filePath} does not exist`);
+    return false;
+  }
 };
 
 // @ts-ignore
