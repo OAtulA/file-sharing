@@ -1,16 +1,26 @@
 import express, { Router } from "express";
 import cors from "cors";
 import path from "path";
-import { clearTempFiles, multerErrorHandler, singleFileHandler } from "./utils/multer";
-import { addFile, getAllFiles, getFile } from "./utils/sqlite";
-import { getSignedDownloadURL, isUploadSuccess, uploadToS3 } from "./utils/s3";
+import {
+  clearTempFiles,
+  multerErrorHandler,
+  singleFileHandler,
+} from "./utils/multer";
+import { addFile, deleteFile, getAllFiles, getFile } from "./utils/sqlite";
+import {
+  deleteFromS3,
+  getSignedDownloadURL,
+  isDeleteSuccess,
+  isUploadSuccess,
+  uploadToS3,
+} from "./utils/s3";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 // want to allow the expose frontend dist folder to be served
 
-const frontendPath = path.resolve(__dirname, "../../frontend/dist")
+const frontendPath = path.resolve(__dirname, "../../frontend/dist");
 app.use(express.static(frontendPath));
 
 const apiRouter = Router();
@@ -20,7 +30,8 @@ apiRouter.post(
   "/upload",
 
   singleFileHandler, // handle the file upload using multer
-  (req, res, next) => { // basically checking if the file is uploaded
+  (req, res, next) => {
+    // basically checking if the file is uploaded
     /*
     console.log(`req body is `, req.body);
     // Check if 'file' field exists in request
@@ -35,16 +46,14 @@ apiRouter.post(
     */
     next();
   },
-  async (req, res) => { // upload the file to s3 and save the file to the sqlite db
+  async (req, res) => {
+    // upload the file to s3 and save the file to the sqlite db
     if (!req.file) {
       res.status(400).json({ error: "No file uploaded" });
       return;
     }
-    // temproray commented 
-    const fileUploadToS3 = await uploadToS3(
-      req.file?.path,
-      req.file?.filename
-    );
+    // temproray commented
+    const fileUploadToS3 = await uploadToS3(req.file?.path, req.file?.filename);
     if (!isUploadSuccess(fileUploadToS3)) {
       res.status(400).json({ error: "File upload failed to s3" });
       return;
@@ -60,20 +69,18 @@ apiRouter.post(
     // Lets delete the local file in the server
     // console.log(`\n \n we need to delete this file `, req.file);
     const isFileDeleted = clearTempFiles(req.file.path);
-    console.log("file deleted successfully", isFileDeleted);
-    
+    console.log("local file copy deleted successfully", isFileDeleted);
+
     // if (!isFileDeleted) {
     //   res.status(400).json({ error: "File upload failed to sqlite" });
     //   return;
     // }
-    res
-      .status(200)
-      .json({
-        downloadUrl: `http//localhost:4001/d/${fileID}`,
-        message: "File uploaded successfully",
-      });
-    
-      // FUTURE WORK ⚒️
+    res.status(200).json({
+      downloadUrl: `http//localhost:4001/d/${fileID}`,
+      message: "File uploaded successfully",
+    });
+
+    // FUTURE WORK ⚒️
     // Now we send the url through which the user can share the file.
     // On the spot we will have some api to turn this url into some QR code
   }
@@ -91,10 +98,28 @@ apiRouter.get("/download/:location", (req, res) => {
 });
 
 // To see all the files that are uploaded
-apiRouter.get("/dall", async(req, res)=>{
-  const files = await getAllFiles()
-  res.status(200).json({files})
-})
+apiRouter.get("/dall", async (req, res) => {
+  const files = await getAllFiles();
+  res.status(200).json({ files });
+});
+
+apiRouter.get("/del/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log("The delete id is ", id);
+  const s3FilePath = (await getFile(id)).s3path;
+  const deleteResponse = await deleteFromS3(s3FilePath);
+  if (deleteResponse===false)
+    res.status(400).json({ error: "File deletion failed, not found" });
+  else if (isDeleteSuccess(deleteResponse)) {
+    const isFileDeleted = await deleteFile(id);
+    if (isFileDeleted === null) {
+      console.log('The delete was successful in file db');
+      res.status(200).json({ message: "File deleted successfully" });
+    } else res.status(400).json({ error: "File deletion failed" });
+  } else {
+    res.status(400).json({ error: "File deletion failed" });
+  }
+});
 
 // The actual implementation to send the filename and the url
 // the frontend will make a request to 4001/api/v0/d/id and get the file name and the url
@@ -103,9 +128,9 @@ apiRouter.get("/d/:id", async (req, res) => {
 
   const id = req.params.id;
   const file = await getFile(id);
-  console.log('file info in the /d is ', file);
+  console.log("file info in the /d is ", file);
 
-  const downloadUrl = await getSignedDownloadURL(file?.s3path, file.file_name)
+  const downloadUrl = await getSignedDownloadURL(file?.s3path, file.file_name);
   if (!downloadUrl) {
     res.status(400).json({ error: "File download failed" });
     return;

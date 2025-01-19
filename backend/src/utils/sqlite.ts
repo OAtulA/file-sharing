@@ -1,4 +1,3 @@
-import exp from "node:constants";
 import { randomBytes } from "node:crypto";
 
 const sqlite3 = require("sqlite3").verbose();
@@ -107,14 +106,14 @@ export const getAllFiles = (): Promise<{ id: string ,filename: string; s3path: s
  * @param id string : The id of the file to be deleted
  * @returns - err or null if deleted
  */
-export const deleteFile = (id: string): Promise<void> => {
+export const deleteFile = (id: string)  => {
   return new Promise((resolve, reject) => {
     db.run(`DELETE FROM files WHERE id = ?`, [id], (err: any) => {
       if (err) {
         console.error("Error deleting file:", err);
         reject(err);
       } else {
-        resolve();
+        resolve(null);
       }
     });
   });
