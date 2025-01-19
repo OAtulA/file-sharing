@@ -6,14 +6,18 @@ interface iData {
   downloadUrl: string;
 }
 
+const domain = import.meta.env.VITE_DOMAIN_NAME
+
 function DownloadPage() {
   const { path } = useParams();
   const [fileName, setFileName] = useState(""),
     [downloadURL, setDownloadUrl] = useState("");
 
+    console.log("fetch is on the download page", domain)
+
   const dummyDownloadHandler = () => {
     // make a request to 4001/api/v0/download/path and get the file name and the url
-    fetch(`http://localhost:4001/api/v0/download/${path}`, { method: "GET" })
+    fetch(`${domain||"http://localhost:4001"}/api/v0/download/${path}`, { method: "GET" })
       .then((response) => response.blob())
       .then((blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -32,7 +36,7 @@ function DownloadPage() {
     console.log("Some requests need to be made.");
 
     // make a download request to 4001/api/v0/d/path and get the file name and the url
-    fetch(`http://localhost:4001/api/v0/d/${path}`, { method: "GET" })
+    fetch(`${domain||"http://localhost:4001"}/api/v0/d/${path}`, { method: "GET" })
       .then((response) => {
         console.log("response is", response);
         return response.json();

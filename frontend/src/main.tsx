@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import DownloadPage from "./Download.tsx";
+import NotFound from "./NotFound.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -11,6 +12,7 @@ createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route path="/" element={<App />}></Route>
         <Route path="/d/:path" element={<DownloadPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   </StrictMode>

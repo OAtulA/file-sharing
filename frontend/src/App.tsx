@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import "./App.css";
 
 interface iDataUploadRes {
@@ -6,7 +6,12 @@ interface iDataUploadRes {
   message: string;
 }
 
+const domain = import.meta.env.VITE_DOMAIN_NAME
+
 function FileSharingPage() {
+  useEffect(() => {
+    console.log("trying fetch on ", domain);
+  }, []);
   const [file, setFile] = useState<File>();
   const [message, setMessage] = useState({ data: "", clr: "" });
   const [downloadUrl, setDownloadUrl] = useState("");
@@ -32,10 +37,14 @@ function FileSharingPage() {
     formData.append("file", file);
 
     setUploading(true);
-    fetch("http://localhost:4001/api/v0/upload", {
-      method: "POST",
-      body: formData,
-    })
+    
+    fetch(
+      `${domain || "http://localhost:4001"}/api/v0/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    )
       .then((response) => {
         if (!response.ok) {
           // Log detailed error

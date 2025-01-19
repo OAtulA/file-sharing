@@ -25,3 +25,5 @@ else{
         console.log(`Server is running on port ${PORT}`);
     })
 }
+
+console.log("The domain is ", process.env.VITE_DOMAIN_NAME);
