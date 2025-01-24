@@ -79,7 +79,6 @@ apiRouter.post(
       downloadUrl: `${process.env.VITE_DOMAIN_NAME||"http//localhost:4001"}/d/${fileID}`,
       message: "File uploaded successfully",
     });
-,
     // FUTURE WORK ⚒️
     // Now we send the url through which the user can share the file.
     // On the spot we will have some api to turn this url into some QR code

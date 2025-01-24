@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+README.md
+
+# to ignore all node_modules and dist folder
+**/node_modules/
+**/dist
+**/.env
