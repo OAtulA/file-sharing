@@ -2,7 +2,7 @@
 
 # Function to check environment variables
 check_env_vars() {
-    local required_vars=("AWS_BUCKET_NAME" "AWS_BUCKET_REGION" "AWS_ACCESS_KEY" "AWS_SECRET_ACCESS_KEY" "PORT", "VITE_DOMAIN_NAME")
+    local required_vars=("AWS_BUCKET_NAME" "AWS_BUCKET_REGION" "AWS_ACCESS_KEY" "AWS_SECRET_ACCESS_KEY" "PORT" "VITE_DOMAIN_NAME")
     local missing_vars=()
 
     for var in "${required_vars[@]}"; do
@@ -53,7 +53,10 @@ install_and_configure_nginx() {
 
     # Generate Nginx configuration using envsubst
     if [[ -f ./nginx.conf ]]; then
-        envsubst < ./nginx.conf | sudo tee /etc/nginx/conf.d/default.conf > /dev/null
+        sudo chmod 666 /etc/nginx/conf.d/default.conf
+        envsubst '$PORT,$VITE_DOMAIN_NAME' < nginx.conf | sudo tee /etc/nginx/conf.d/default.conf
+
+        # envsubst < ./nginx.conf | sudo tee /etc/nginx/conf.d/default.conf > /dev/null
     else
         echo "Error: nginx.conf not found in current directory"
         return 1
@@ -72,36 +75,57 @@ install_and_configure_nginx() {
 
 # Function to build and run Docker containers
 build_and_run_docker() {
-    # Check if Dockerfile exists
+    # Extensive error checking and logging
+    set -x  # Enable verbose output
+
+    # Validate critical environment variables
+    local required_vars=(
+        "PORT" 
+        "VITE_DOMAIN_NAME" 
+        "AWS_BUCKET_NAME" 
+        "AWS_BUCKET_REGION" 
+        "AWS_ACCESS_KEY" 
+        "AWS_SECRET_ACCESS_KEY"
+    )
+
+    for var in "${required_vars[@]}"; do
+        if [[ -z "${!var}" ]]; then
+            echo "Error: $var is not set"
+            return 1
+        fi
+    done
+
+    # Ensure Dockerfile exists
     if [[ ! -f Dockerfile ]]; then
-        echo "Error: Dockerfile not found in current directory"
+        echo "Error: Dockerfile not found"
         return 1
     fi
 
-    # Check if docker command is available, then install it
-    if ! command -v docker &> /dev/null; then
-        echo "Docker not found. Installing Docker..."
-        sudo yum install -y docker || sudo apt-get install -y docker.io
-    fi
+    # Docker setup and permissions
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo usermod -aG docker $USER
 
-
-    # Build Docker image
-    echo "Building Docker image..."
-    docker build -t my-app \
+    # Verbose Docker build
+    docker build \
         --build-arg PORT=${PORT} \
         --build-arg VITE_DOMAIN_NAME=${VITE_DOMAIN_NAME} \
         --build-arg AWS_BUCKET_NAME=${AWS_BUCKET_NAME} \
         --build-arg AWS_BUCKET_REGION=${AWS_BUCKET_REGION} \
         --build-arg AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
         --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-        . || return 1
+        -t my-app \
+        --progress=plain \
+        . || {
+            echo "Docker build failed"
+            return 1
+        }
 
-    # Stop and remove existing container if it exists
+    # Stop and remove existing container
     docker stop my-app-container 2>/dev/null
     docker rm my-app-container 2>/dev/null
 
-    # Run Docker container
-    echo "Starting Docker container..."
+    # Run Docker container with comprehensive logging
     docker run -d \
         --name my-app-container \
         -p ${PORT}:${PORT} \
@@ -111,11 +135,19 @@ build_and_run_docker() {
         -e AWS_BUCKET_REGION=${AWS_BUCKET_REGION} \
         -e AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
         -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-        my-app || return 1
+        my-app || {
+            echo "Container start failed"
+            docker logs my-app-container
+            return 1
+        }
 
-    echo "Docker container started successfully!"
+    # Verify container status
+    docker ps | grep my-app-container
+    
+    set +x  # Disable verbose output
     return 0
 }
+
 
 # Function to install and configure SSL with Certbot
 install_ssl_certificate() {
@@ -125,7 +157,7 @@ install_ssl_certificate() {
     if [[ -z "$domain" ]]; then
         echo "Error: No domain provided for SSL certificate"
         return 1
-    }
+    fi
 
     # Install Certbot dependencies
     if command -v yum &> /dev/null; then
@@ -259,6 +291,3 @@ while true; do
 done
 
 echo "Setup completed successfully!"
-
-
-
