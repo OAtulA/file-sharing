@@ -7,8 +7,13 @@
 
 # Stage 1: Frontend Build
 FROM node:20-alpine AS frontend-build
+
+ARG CLIENT_ENV
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
+# Copying the correct  .env file to the frontend folder
+COPY ${CLIENT_ENV} .env
+RUN echo "CLIENT_ENV=${CLIENT_ENV}"
 RUN npm i
 
 COPY frontend ./

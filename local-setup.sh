@@ -23,10 +23,13 @@ for var in "${required_vars[@]}"; do
 done
 
 # Docker build and run
-docker build -t file-upload-app .
+docker build --build-arg CLIENT_ENV="frontend/.env.demo" -t file-upload-app .
+
+# docker build --build-arg  CLIENT_ENV="frontend/.env.demo" \
+#   -t file-upload-app .
 
 docker run -d \
-    --name my-app-local \
+    --name file-up \
     -p ${PORT}:${PORT} \
     -e PORT=${PORT} \
     -e VITE_DOMAIN_NAME=${VITE_DOMAIN_NAME} \

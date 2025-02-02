@@ -28,9 +28,3 @@ chmod +x local-setup.sh
 ```
 
 You can simply just run it and it will install all the dependencies and run the app.  
-
-## Issue
-
-My app is not getting the env in the frontend build.
-
-Look at the line 12 to 16 in the [frontend/src/App.tsx](./frontend/src/App.tsx)  

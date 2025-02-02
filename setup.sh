@@ -108,7 +108,8 @@ build_and_run_docker() {
 
     # Verbose Docker build
     docker build \
-        -t my-app \
+        --build-arg CLIENT_ENV="~/app/.env.client" \
+        -t file-share-img \
         --progress=plain \
         . || {
             echo "Docker build failed"
@@ -116,12 +117,12 @@ build_and_run_docker() {
         }
 
     # Stop and remove existing container
-    docker stop my-app-container 2>/dev/null
-    docker rm my-app-container 2>/dev/null
+    docker stop file-share-container 2>/dev/null
+    docker rm file-share-container 2>/dev/null
 
     # Run Docker container with comprehensive logging
     docker run -d \
-        --name my-app-container \
+        --name file-share-container \
         -p ${PORT}:${PORT} \
         -e PORT=${PORT} \
         -e VITE_DOMAIN_NAME=${VITE_DOMAIN_NAME} \
@@ -129,9 +130,9 @@ build_and_run_docker() {
         -e AWS_BUCKET_REGION=${AWS_BUCKET_REGION} \
         -e AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
         -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-        my-app || {
+        file-share-img || {
             echo "Container start failed"
-            docker logs my-app-container
+            docker logs file-share-container
             return 1
         }
 
@@ -266,4 +267,4 @@ setup_project() {
 setup_project
 
 
-echo "Setup completed successfully!"
+echo "Setup process completed successfully!"
