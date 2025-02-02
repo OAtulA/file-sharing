@@ -11,6 +11,8 @@ function FileSharingPage() {
   const  domain:string = import.meta.env.VITE_DOMAIN_NAME || process?.env.VITE_DOMAIN_NAME
   useEffect(() => {
     console.log("trying fetch on ", domain);
+    console.log("domain is ", import.meta.env.VITE_DOMAIN_NAME);
+    console.log("Port is ", import.meta.env.VITE_PORT);
   }, [domain]);
   const [file, setFile] = useState<File>();
   const [message, setMessage] = useState({ data: "", clr: "" });

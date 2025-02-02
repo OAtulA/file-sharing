@@ -107,7 +107,7 @@ build_and_run_docker() {
     sudo usermod -aG docker $USER
 
     # Verbose Docker build
-    docker build \        
+    docker build \
         -t my-app \
         --progress=plain \
         . || {
