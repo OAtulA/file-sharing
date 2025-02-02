@@ -6,7 +6,7 @@ interface iDataUploadRes {
   message: string;
 }
 
-const domain = import.meta.env.VITE_DOMAIN_NAME
+const domain:string = import.meta.env.VITE_DOMAIN_NAME || process?.env.VITE_DOMAIN_NAME
 
 function FileSharingPage() {
   useEffect(() => {

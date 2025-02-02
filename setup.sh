@@ -151,143 +151,125 @@ build_and_run_docker() {
 
 # Function to install and configure SSL with Certbot
 install_ssl_certificate() {
-    local domain="$1"
+    local domain="${VITE_DOMAIN_NAME}"
+    local email="${EMAIL}"
 
-    # Check if domain is provided
     if [[ -z "$domain" ]]; then
         echo "Error: No domain provided for SSL certificate"
-        return 1
+        exit 1  # Use exit instead of return
     fi
 
-    # Install Certbot dependencies
+    echo "Stopping Nginx to free up port 80..."
+    sudo systemctl stop nginx
+
+    echo "Installing Certbot..."
     if command -v yum &> /dev/null; then
-        # Amazon Linux / RHEL based
-        sudo amazon-linux-extras enable epel
-        sudo yum clean metadata
         sudo yum install -y certbot python3-certbot-nginx
     elif command -v apt-get &> /dev/null; then
-        # Ubuntu/Debian based
         sudo apt-get update
         sudo apt-get install -y certbot python3-certbot-nginx
     else
         echo "Unsupported package manager. Please install Certbot manually."
-        return 1
+        exit 1
     fi
 
-    # Obtain SSL Certificate
     echo "Obtaining SSL certificate for $domain..."
-   # Use email from environment variable if available
-    if [[ -n "$EMAIL" ]]; then
-        sudo certbot --nginx -d "$domain" --non-interactive --agree-tos \
-            --email "$EMAIL" || return 1
-    else
-        # If no email is provided, use the --register-unsafely-without-email flag
-        sudo certbot --nginx -d "$domain" --non-interactive --agree-tos \
-            --register-unsafely-without-email || return 1
+    certbot_cmd="sudo certbot certonly --standalone --non-interactive --agree-tos -d \"$domain\""
+
+    if [[ -n "$email" ]]; then
+    certbot_cmd+=" --email \"$email\""
     fi
 
-    # Test automatic renewal
+    eval "$certbot_cmd" || exit 1
+
+    echo "Testing SSL renewal..."
     sudo certbot renew --dry-run
 
-    # Restart Nginx to ensure new SSL configuration is loaded
-    if sudo nginx -t; then
-        sudo systemctl reload nginx
-        echo "Nginx reloaded successfully"
-    else
-        echo "Error: Nginx config test failed. Not reloading." 
-        return 1
-    fi
+    echo "Restarting Nginx..."
+    sudo systemctl start nginx
 
     echo "SSL certificate for $domain installed successfully!"
-    return 0
 }
 
+# Flags to track completed steps
+nginx_done=false
+docker_done=false
+ssl_done=false
 
-# Main script
-while true; do
+setup_project() {
     echo "Welcome to the project setup script!"
-    echo "Are you done with the Environment variables setup?"
-    read -p "Do you want to proceed with project setup? (y/n) " yn
 
-    case ${yn,,} in
-    [y])  
-        # Check environment variables
-        if ! check_env_vars; then
-            echo "Please set all required environment variables before proceeding."
-            continue
+    # Check environment variables
+    if ! check_env_vars; then
+        echo "Error: Please set all required environment variables before proceeding."
+        exit 1
+    fi
+
+    while true; do
+        if ! $nginx_done; then
+            read -p "Do you want to configure Nginx? (y/n) " nginx_setup
+            case ${nginx_setup,,} in
+            [y])
+                echo "Configuring Nginx..."
+                if install_and_configure_nginx; then
+                    echo "Nginx setup completed successfully!"
+                    nginx_done=true
+                else
+                    echo "Error: Failed to configure Nginx."
+                    read -p "Retry Nginx setup? (y/n) " retry
+                    [[ ${retry,,} != "y" ]] && nginx_done=true
+                fi
+                ;;
+            [n]) nginx_done=true ;;
+            esac
         fi
 
-        # Nginx setup confirmation
-        read -p "Do you want to configure Nginx? (y/n) " nginx_setup
+        if ! $docker_done; then
+            read -p "Do you want to build and run Docker containers? (y/n) " docker_setup
+            case ${docker_setup,,} in
+            [y])
+                echo "Setting up Docker containers..."
+                if build_and_run_docker; then
+                    echo "Docker setup completed successfully!"
+                    docker_done=true
+                else
+                    echo "Error: Failed to build or run Docker containers."
+                    read -p "Retry Docker setup? (y/n) " retry
+                    [[ ${retry,,} != "y" ]] && docker_done=true
+                fi
+                ;;
+            [n]) docker_done=true ;;
+            esac
+        fi
 
-        case ${nginx_setup,,} in
-        [y])
-            echo "Configuring Nginx..."
-            if ! install_and_configure_nginx; then
-                echo "Error: Failed to configure Nginx"
-                continue 
-            fi
-            echo "Nginx setup completed successfully!"
-            ;;
-        [n])
-            echo "Skipping Nginx setup."
-            ;;
-        *)
-            echo "Invalid response. Please answer y or n."
-            continue
-            ;;
-        esac
+        if ! $ssl_done; then
+            read -p "Do you want to install SSL certificate for $VITE_DOMAIN_NAME? (y/n) " ssl_setup
+            case ${ssl_setup,,} in
+            [y])
+                echo "Setting up SSL certificate..."
+                if install_ssl_certificate "$VITE_DOMAIN_NAME"; then
+                    echo "SSL certificate setup completed successfully!"
+                    ssl_done=true
+                else
+                    echo "Error: Failed to install SSL certificate."
+                    read -p "Retry SSL setup? (y/n) " retry
+                    [[ ${retry,,} != "y" ]] && ssl_done=true
+                fi
+                ;;
+            [n]) ssl_done=true ;;
+            esac
+        fi
 
-        # Docker setup confirmation
-        read -p "Do you want to build and run Docker containers? (y/n) " docker_setup
+        # Exit the loop if all steps are done
+        if $nginx_done && $docker_done && $ssl_done; then
+            echo "All setup stages are completed successfully!"
+            exit 0
+        fi
+    done
+}
 
-        case ${docker_setup,,} in
-        [y])
-            echo "Setting up Docker containers..."
-            if ! build_and_run_docker; then
-                echo "Error: Failed to build or run Docker containers"
-                continue 
-            fi
-            echo "Docker setup completed successfully!"
-            ;;
-        [n])
-            echo "Skipping Docker setup."
-            ;;
-        *)
-            echo "Invalid response. Please answer y or n."
-            continue
-            ;;
-        esac
+# Call the main function
+setup_project
 
-        # SSL Certificate setup confirmation
-        read -p "Do you want to install SSL certificate for $VITE_DOMAIN_NAME? (y/n) " ssl_setup
-
-        case ${ssl_setup,,} in
-        [y])
-            echo "Setting up SSL certificate..."
-            if ! install_ssl_certificate "$VITE_DOMAIN_NAME"; then
-                echo "Error: Failed to install SSL certificate"
-                continue 
-            fi
-            echo "SSL certificate setup completed successfully!"
-            ;;
-        [n])
-            echo "Skipping SSL certificate setup."
-            ;;
-        *)
-            echo "Invalid response. Please answer y or n."
-            continue
-            ;;
-        esac
-        ;;
-    [n])
-        echo "Project setup cancelled."
-        exit 0
-        ;;
-    *)
-        echo "Invalid response. Please answer y or n."
-        ;;
-    esac
-done
 
 echo "Setup completed successfully!"
