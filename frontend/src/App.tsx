@@ -6,12 +6,12 @@ interface iDataUploadRes {
   message: string;
 }
 
-const domain:string = import.meta.env.VITE_DOMAIN_NAME || process?.env.VITE_DOMAIN_NAME
 
 function FileSharingPage() {
+  const  domain:string = import.meta.env.VITE_DOMAIN_NAME || process?.env.VITE_DOMAIN_NAME
   useEffect(() => {
     console.log("trying fetch on ", domain);
-  }, []);
+  }, [domain]);
   const [file, setFile] = useState<File>();
   const [message, setMessage] = useState({ data: "", clr: "" });
   const [downloadUrl, setDownloadUrl] = useState("");

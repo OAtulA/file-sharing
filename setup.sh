@@ -107,13 +107,7 @@ build_and_run_docker() {
     sudo usermod -aG docker $USER
 
     # Verbose Docker build
-    docker build \
-        --build-arg PORT=${PORT} \
-        --build-arg VITE_DOMAIN_NAME=${VITE_DOMAIN_NAME} \
-        --build-arg AWS_BUCKET_NAME=${AWS_BUCKET_NAME} \
-        --build-arg AWS_BUCKET_REGION=${AWS_BUCKET_REGION} \
-        --build-arg AWS_ACCESS_KEY=${AWS_ACCESS_KEY} \
-        --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+    docker build \        
         -t my-app \
         --progress=plain \
         . || {

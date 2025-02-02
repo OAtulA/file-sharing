@@ -40,7 +40,7 @@ RUN npm prune --production
 COPY backend/package*.json ./
 
 # Expose port from environment
-EXPOSE ${PORT}
+EXPOSE ${PORT:-4000}
 
 # Set working directory to backend
 WORKDIR /app/backend
