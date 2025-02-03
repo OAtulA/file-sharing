@@ -26,7 +26,7 @@ const s3Client = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY || "",
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   },
-  requestHandler: new ( NodeHttpHandler)({
+  requestHandler: new NodeHttpHandler({
     connectionTimeout: 10_000, // 10 seconds
   }),
 });
@@ -46,7 +46,7 @@ const s3Client = new S3Client({
 //     Bucket: process.env.AWS_BUCKET_NAME || "",
 //     Key: key,
 //     Body: file,
-//   };  
+//   };
 
 //   try {
 //     const command = new PutObjectCommand(params);
@@ -63,21 +63,21 @@ async function uploadToS3(filepath: string, key: string) {
     Bucket: process.env.AWS_BUCKET_NAME || "",
     Key: key,
     Body: file,
-  };  
+  };
 
   try {
     const upload = new Upload({
       client: s3Client,
       params,
-      
+
       // Optional configurations
       queueSize: 4, // Number of concurrent parts to upload
       partSize: 5 * 1024 * 1024, // 5MB part size
-      leavePartsOnError: false // Automatically clean up failed parts
+      leavePartsOnError: false, // Automatically clean up failed parts
     });
 
     // Optional: Track upload progress
-    upload.on('httpUploadProgress', (progress) => {
+    upload.on("httpUploadProgress", (progress) => {
       console.log(`Upload progress: ${progress.loaded} / ${progress.total}`);
     });
 
@@ -103,21 +103,21 @@ const isUploadSuccess = (response: PutObjectCommandOutput): boolean => {
 
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
 
-async function doesObjectExist(key: string): Promise<boolean> {
+export async function doesObjectExist(key: string): Promise<boolean> {
   try {
-    await s3Client.send(new HeadObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: key,
-    }));
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: key,
+      })
+    );
     console.log(`Object exists for key: ${key}`);
     return true;
   } catch (error: any) {
-    if (error.name === "NotFound") return false;
     console.error(`Error checking object existence for key: ${key}`, error);
-    throw error;
+    return false;
   }
 }
-
 
 /**
  * Delete File
@@ -127,7 +127,7 @@ async function doesObjectExist(key: string): Promise<boolean> {
  */
 async function deleteFromS3(key: string) {
   const objectExists = await doesObjectExist(key);
-  if(!objectExists) {
+  if (!objectExists) {
     console.log("Object does not exist in S3");
     return false;
   }

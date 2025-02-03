@@ -68,21 +68,38 @@ export const addFile = (filename: string, s3path: string): Promise<string> => {
  * 
  * Here filename is the original filename and s3path is the s3 path of the file
  */
-export const getFile = (id: string): Promise<{ id: string ,file_name: string; s3path: string }> => {
+export const getFile = (id: string): Promise<{ id: string, file_name: string; s3path: string }>  => {
   return new Promise((resolve, reject) => {
+    console.log("Fetching file with ID:", id); // Log the ID being queried
     db.get(`SELECT id, file_name, s3path FROM files WHERE id = ?`, [id], (err: any, row: any) => {
       if (err) {
         console.error("Error fetching file:", err);
         reject(err);
       } else if (!row) {
-        console.error("File not found");
+        console.error("File not found for ID:", id); // Log the ID that was not found
         reject(new Error("File not found"));
       } else {
+        console.log("File found:", row); // Log the row returned
         resolve(row);
       }
     });
   });
 };
+// export const getFile = (id: string): Promise<{ id: string ,file_name: string; s3path: string }> => {
+//   return new Promise((resolve, reject) => {
+//     db.get(`SELECT id, file_name, s3path FROM files WHERE id = ?`, [id], (err: any, row: any) => {
+//       if (err) {
+//         console.error("Error fetching file:", err);
+//         reject(err);
+//       } else if (!row) {
+//         console.error("File not found");
+//         reject(new Error("File not found"));
+//       } else {
+//         resolve(row);
+//       }
+//     });
+//   });
+// };
 
 /**
  * To get all the files in the database only for testing purposes

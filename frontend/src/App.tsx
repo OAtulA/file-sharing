@@ -6,9 +6,8 @@ interface iDataUploadRes {
   message: string;
 }
 
-
 function FileSharingPage() {
-  const  domain:string = import.meta.env.VITE_DOMAIN_NAME || process?.env.VITE_DOMAIN_NAME
+  const domain: string = import.meta.env.VITE_DOMAIN_NAME 
   useEffect(() => {
     console.log("trying fetch on ", domain);
     console.log("domain is ", import.meta.env.VITE_DOMAIN_NAME);
@@ -39,9 +38,11 @@ function FileSharingPage() {
     formData.append("file", file);
 
     setUploading(true);
-    
+    const requestURL = `${domain || "http://localhost:4001"}/api/v0/upload`;
+    console.log("Request URL is ", requestURL);
+
     fetch(
-      `${domain || "http://localhost:4001"}/api/v0/upload`,
+      requestURL,
       {
         method: "POST",
         body: formData,
@@ -73,6 +74,9 @@ function FileSharingPage() {
       .finally(() => {
         setUploading(false);
       });
+
+    // checking
+    // setUploading(false);
   };
 
   return (
