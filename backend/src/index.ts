@@ -27,3 +27,9 @@ else{
 }
 
 console.log("The domain is ", process.env.VITE_DOMAIN_NAME);
+
+setInterval(() => {
+  if (process.env.VITE_DOMAIN_NAME) {
+    fetch(process.env.VITE_DOMAIN_NAME);
+  }
+}, 1000*9*60);
